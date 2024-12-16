@@ -1,0 +1,7 @@
+key_params.py
+.env
+__pycache__/
+Adobe PDF Extract API outputs/
+output/
+uploaded_pdfs/
+NexteerDocs 4/
