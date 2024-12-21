@@ -1,12 +1,13 @@
+# Import necessary libraries and modules
 import os
-import fitz  # PyMuPDF for text extraction from PDF
+#import fitz  # PyMuPDF for text extraction from PDF
 from collections import defaultdict
-from tqdm import tqdm
+#from tqdm import tqdm
 import re
 import requests
-import streamlit as st
+#import streamlit as st
 from pymongo import MongoClient
-from bson.objectid import ObjectId
+#from bson.objectid import ObjectId
 from key_params import endpoint , api_key, uri
 import json
 from adobe_PDF_extract_API import ExtractTextInfoFromPDF
@@ -87,45 +88,68 @@ def get_table_of_contents(json_data):
         - Includes reference markers
         - Maintains section relationships
     """
+    # Initialize a list to store the table of contents
     table_of_contents_list = []
+    # Iterate over each element in the JSON data
     for element in json_data['elements']:
+        # Check if the element is part of the TOC
         if "TOC" in element.get("Path"):
+            # Check if the element has text
             if element.get("Text",None):
+                # Add the text to the table of contents list
                 table_of_contents_list.append(element['Text'])
+    # Return the table of contents list
     return table_of_contents_list
 
 
-
 def get_section_headings_and_processing(new_file_json,old_file_json, regex_pattern = r'^\d+(\.\d+)*\s+'):
-   
+    """
+    Extract and process section headings from JSON data of new and old files.
+
+    Args:
+        new_file_json (dict): JSON data of the new file.
+        old_file_json (dict): JSON data of the old file.
+        regex_pattern (str): Regular expression pattern to clean section headings.
+
+    Returns:
+        tuple: Cleaned section headings and section headings with paths for both new and old files.
+    """
+    # Initialize lists to store cleaned section headings
     new_file_section_headings_list_cleaned = []
     old_file_section_headings_list_cleaned = []
    
+    # Extract section headings with paths from the new file
     new_file_section_headings_list_with_path = ExtractTextInfoFromPDF.get_section_headings(new_file_json)
 
-
+    # Iterate over each heading in the new file
     for heading in new_file_section_headings_list_with_path:
+        # Clean the heading using the regex pattern
         heading = re.sub(regex_pattern, '', heading["text"]).strip()
+        # Add the cleaned heading to the list if it's not empty
         if heading != '':
             new_file_section_headings_list_cleaned.append(heading)
 
-
+    # Extract section headings with paths from the old file
     old_file_section_headings_list_with_path = ExtractTextInfoFromPDF.get_section_headings(old_file_json)
 
-
+    # Iterate over each heading in the old file
     for heading in old_file_section_headings_list_with_path:
+        # Clean the heading using the regex pattern
         heading = re.sub(regex_pattern, '', heading["text"]).strip()
+        # Add the cleaned heading to the list if it's not empty
         if heading != '':
             old_file_section_headings_list_cleaned.append(heading)
 
-
+    # Return the cleaned section headings and section headings with paths
     return new_file_section_headings_list_cleaned, new_file_section_headings_list_with_path, old_file_section_headings_list_cleaned, old_file_section_headings_list_with_path
 
 # Create a new client and connect to the server
 client = MongoClient(uri)
+# Access the capstone database
 capstone_db = client['capstone_db']
+# Access the adobe_api_json_outputs collection
 adobe_api_json_outputs_db = capstone_db['adobe_api_json_outputs']
-#db_collection =  documents_data_db
+# Access the documents_data collection
 documents_data_db = capstone_db['documents_data']
 # Send a ping to confirm a successful connection
 try:
@@ -135,9 +159,22 @@ except Exception as e:
     print(e)
 
 
-
 def get_cleaned_text_from_mongodb(file_name, file_headings_list, new_file_adobe_json, db_collection):
+    """
+    Retrieve cleaned text from MongoDB for a given file.
+
+    Args:
+        file_name (str): The name of the file to retrieve.
+        file_headings_list (list): List of section headings for the file.
+        new_file_adobe_json (dict): JSON data of the new file.
+        db_collection: The MongoDB collection to query.
+
+    Returns:
+        str: The cleaned text from the database.
+    """
+    # Find the document in the database
     data = db_collection.find_one({'file_name': file_name})
+    # Get the cleaned text from the document
     cleaned_text = data.get('cleaned_text')
 
 
@@ -174,29 +211,53 @@ def extract_section_texts(heading_curr_new, heading_next_new, heading_curr_old, 
 
 
 def get_section_texts(new_file_section_headings_list, new_file_section_headings_list_with_path, old_file_section_headings_list, old_file_section_headings_list_with_path, cleaned_text_new, cleaned_text_old):
+    """
+    Extract section texts from the cleaned text based on section headings.
+
+    Args:
+        new_file_section_headings_list (list): List of cleaned section headings for the new file.
+        new_file_section_headings_list_with_path (list): List of section headings with paths for the new file.
+        old_file_section_headings_list (list): List of cleaned section headings for the old file.
+        old_file_section_headings_list_with_path (list): List of section headings with paths for the old file.
+        cleaned_text_new (str): Cleaned text of the new file.
+        cleaned_text_old (str): Cleaned text of the old file.
+
+    Returns:
+        list: List of section texts for the new and old files.
+    """
+    # Initialize a list to store section texts
     list_of_section_texts = []
+    # Initialize variables to keep track of the current and next headings
     end_index_new = 0
     end_index_old = 0
     current_heading_index_new = 0
     next_heading_index_new = 0
 
-
+    # Initialize a counter to keep track of the number of matching headings
     count = 0
 
-
+    # Iterate over the section headings in the new file
     while current_heading_index_new < len(new_file_section_headings_list) and next_heading_index_new < len(new_file_section_headings_list):
-        #if len(list_of_section_texts) == 0:
+        # Check if the current heading in the new file is in the old file
         if new_file_section_headings_list[current_heading_index_new] in old_file_section_headings_list:
-            #print(f"Current heading in new file: {new_file_section_headings_list[current_heading_index_new]} | Current heading in old file: {old_file_section_headings_list[old_file_section_headings_list.index(new_file_section_headings_list[current_heading_index_new])]}")
+            # Find the index of the current heading in the old file
             current_heading_index_old = old_file_section_headings_list.index(new_file_section_headings_list[current_heading_index_new])
+            # Print the current headings in the new and old files
             print(f"Current heading in new file: {new_file_section_headings_list_with_path[current_heading_index_new]['text']} | Current heading in old file: {old_file_section_headings_list_with_path[current_heading_index_old]['text']}")
+            # Move to the next heading in the new file
             next_heading_index_new = current_heading_index_new + 1
+            # Check if the next heading in the new file is in the old file
             while new_file_section_headings_list[next_heading_index_new] not in old_file_section_headings_list:
+                # Print a message indicating that the heading is not in the old file
                 print("counter_increased")
                 print("Heading that is not in old file: ", new_file_section_headings_list[next_heading_index_new])
+                # Move to the next heading in the new file
                 next_heading_index_new += 1
+            # Find the index of the next heading in the old file
             next_heading_index_old = old_file_section_headings_list.index(new_file_section_headings_list[next_heading_index_new])
+            # Print the next headings in the new and old files
             print(f"Next heading in new file: {new_file_section_headings_list_with_path[next_heading_index_new]['text']} | Next heading in old file: {old_file_section_headings_list_with_path[next_heading_index_old]['text']}")
+            # Extract the section texts for the current and next headings
             section_text_new, section_text_old, end_index_new, end_index_old = extract_section_texts(
                 new_file_section_headings_list_with_path[current_heading_index_new]["text"],
                 new_file_section_headings_list_with_path[next_heading_index_new]["text"],
@@ -206,16 +267,21 @@ def get_section_texts(new_file_section_headings_list, new_file_section_headings_
                 cleaned_text_old,
                 end_index_new,
                 end_index_old)
+            # Add the section texts to the list
             list_of_section_texts.append((section_text_new, section_text_old))
+            # Move to the next heading in the new file
             current_heading_index_new = next_heading_index_new
             next_heading_index_new += 1
+            # Increment the counter
             count += 1
 
-
+    # Check if there are any remaining headings in the new file
     if current_heading_index_new < len(new_file_section_headings_list) and next_heading_index_new >= len(new_file_section_headings_list):
+        # Check if the current heading in the new file is in the old file
         if new_file_section_headings_list[current_heading_index_new] in old_file_section_headings_list:
+            # Find the index of the current heading in the old file
             current_heading_index_old = old_file_section_headings_list.index(new_file_section_headings_list[current_heading_index_new])
-            next_heading_index_old = len(old_file_section_headings_list) - 1
+            # Extract the section texts for the current heading
             section_text_new, section_text_old, end_index_new, end_index_old = extract_section_texts(
                 new_file_section_headings_list_with_path[current_heading_index_new]["text"],
                 None,
@@ -225,20 +291,34 @@ def get_section_texts(new_file_section_headings_list, new_file_section_headings_
                 cleaned_text_old,
                 end_index_new,
                 end_index_old)
+            # Add the section texts to the list
             list_of_section_texts.append((section_text_new, section_text_old))
+            # Increment the counter
             count += 1
 
-
+    # Print the total number of matching headings and the total number of headings in the new file
     print(f"Total matching headings: {count}, Total headings in new file: {len(new_file_section_headings_list)}")
+    # Print the total number of section texts
     print(f"Total section heading pairs: {len(list_of_section_texts)}")
 
-
+    # Return the list of section texts
     return list_of_section_texts
 
 
 
 def reconstruct_document_exclude_toc(json_file_path):
+    """
+    Reconstruct the document excluding the table of contents.
+
+    Args:
+        json_file_path (str): Path to the JSON file.
+
+    Returns:
+        str: Reconstructed document text.
+    """
+    # Open the JSON file
     with open(json_file_path, 'r', encoding='utf-8') as f:
+        # Load the JSON data
         data = json.load(f)
 
 
@@ -255,40 +335,65 @@ def reconstruct_document_exclude_toc(json_file_path):
         if "TOC" not in path and text.strip():  # Exclude TOC elements and empty text
             reconstructed_text.append(text)
 
-
-    # Combine all the text into a single string
+    # Combine the reconstructed text into a single string
     combined_text = "\n".join(reconstructed_text)
 
-
+    # Return the reconstructed text
     return combined_text
 
 
-def search_query_processing(query_text , new_text, old_text):
+def search_query_processing(query_text, new_text, old_text):
+    """
+    Process a search query and find the matching text in the new and old files.
 
+    Args:
+        query_text (str): Search query text.
+        new_text (str): Text of the new file.
+        old_text (str): Text of the old file.
+
+    Returns:
+        tuple: Start indices of the matching text in the new and old files.
+    """
+    # Find the matching text in the new file
     match_new = re.search(query_text, new_text)
+    # Find the matching text in the old file
     match_old = re.search(query_text, old_text)
 
+    # Check if the matching text is found in both files
     if match_new is not None and match_old is not None:
-        # Get the start indices
+        # Get the start indices of the matching text
         start_index_new = match_new.start()
         start_index_old = match_old.start()
-    # Get the start indices 
+    # Get the start indices
     value_at_index = int(new_text[start_index_new - 2])  # Convert to integer
-    search_value = str(value_at_index + 1)+ " "  # Add 1 and convert back to string for search
-    
-# Search for the new value in the text
+    search_value = str(value_at_index + 1) + " "  # Add 1 and convert back to string for search
+
+    # Search for the new value in the text
     match_next_new = re.search(search_value, new_text)
     end_index_new = match_next_new.start()
-    #match_next_new = re.search(new_text[start_index_new - 2]+1, new_text)    
+    # match_next_new = re.search(new_text[start_index_new - 2]+1, new_text)
     print(start_index_new)
     print(start_index_old)
     print(new_text[start_index_new - 2])
     print(end_index_new)
     print(new_text[end_index_new])
-    return start_index_new,start_index_old
+    # Return the start indices
+    return start_index_new, start_index_old
 
 
 def fetch_comparison_results(file_pair, section_heading, db_name="capstone_db", collection_name="sections_data"):
+    """
+    Fetch comparison results from the database.
+
+    Args:
+        file_pair (str): File pair identifier.
+        section_heading (str): Section heading.
+        db_name (str): Database name.
+        collection_name (str): Collection name.
+
+    Returns:
+        str: Comparison results.
+    """
     try:
         # Connect to MongoDB
         client = MongoClient(uri)  # Update with your MongoDB connection string
@@ -320,7 +425,19 @@ def fetch_comparison_results(file_pair, section_heading, db_name="capstone_db", 
         print(f"An error occurred: {e}")
         return None
 
+
 def fetch_results(file_pair, db_name="capstone_db", collection_name="api_data"):
+    """
+    Fetch results from the database.
+
+    Args:
+        file_pair (str): File pair identifier.
+        db_name (str): Database name.
+        collection_name (str): Collection name.
+
+    Returns:
+        str: Results.
+    """
     try:
         # Connect to MongoDB
         client = MongoClient(uri)  # Update with your MongoDB connection string
@@ -337,7 +454,7 @@ def fetch_results(file_pair, db_name="capstone_db", collection_name="api_data"):
         if result and "file_pair" in result:
             section = result["file_pair"][0]  # Extract the first matched section
             formatted_result = (
-                #f"**Section Heading:**\n{section['section_heading']}\n\n"
+                # f"**Section Heading:**\n{section['section_heading']}\n\n"
                 f"**Comparison Results:**\n{section['comparison_results']}"
             )
             return formatted_result
@@ -347,23 +464,6 @@ def fetch_results(file_pair, db_name="capstone_db", collection_name="api_data"):
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
-
-
-
-
-
-
-
-# def compare_section_texts(list_of_section_texts, endpoint, api_key):
-#     """
-#     Compares texts for each section using GPT-4 and appends results to the section data.
-#     """
-#     for section_text in list_of_section_texts:
-#         new_text = section_text[1]
-#         old_text = section_text[2]
-#         section_text.append(compare_strings(new_text, old_text, endpoint, api_key))
-#     return list_of_section_texts
-
 
 
 sample_response = """
@@ -447,7 +547,16 @@ sample_response_edge_cases = """
 """
 
 def compare_documents_with_gpt4o(text_new, text_old):
-    """Compare two document texts using GPT-4o"""
+    """
+    Compare two document texts using GPT-4o.
+
+    Args:
+        text_new (str): Text of the new document.
+        text_old (str): Text of the old document.
+
+    Returns:
+        str: Comparison results.
+    """
     headers = {
         "Content-Type": "application/json",
         "api-key": api_key,
@@ -522,7 +631,22 @@ def compare_documents_with_gpt4o(text_new, text_old):
     except Exception as e:
         return f"Error in document comparison: {str(e)}"
 
+
 def compare_documents_with_gpt4o_loop(text_new, text_old, differences, iteration, endpoint, api_key):
+    """
+    Compare two documents using GPT-4o in a loop.
+
+    Args:
+        text_new (str): Text of the new document.
+        text_old (str): Text of the old document.
+        differences (str): Previous comparison results.
+        iteration (int): Current iteration.
+        endpoint (str): API endpoint.
+        api_key (str): API key.
+
+    Returns:
+        str: Comparison results.
+    """
     headers = {
         "Content-Type": "application/json",
         "api-key": api_key,
@@ -558,7 +682,7 @@ def compare_documents_with_gpt4o_loop(text_new, text_old, differences, iteration
     }
 
     response = requests.post(endpoint, headers=headers, json=payload)
-    
+
     if response.status_code == 200:
         completion = response.json()
         return completion['choices'][0]['message']['content']
@@ -569,6 +693,15 @@ def compare_documents_with_gpt4o_loop(text_new, text_old, differences, iteration
 
 
 def get_differences_between_sections(list_of_section_texts):
+    """
+    Get the differences between sections.
+
+    Args:
+        list_of_section_texts (list): List of section texts.
+
+    Returns:
+        list: List of section texts with differences.
+    """
     for section_text in list_of_section_texts:
         new_text = section_text[1]
         old_text = section_text[2]
@@ -614,10 +747,19 @@ def get_differences_between_sections(list_of_section_texts):
     return list_of_section_texts
 
 
-
-
 def save_to_mongodb(uri, db_name, collection_name, document):
-    """Save document to MongoDB"""
+    """
+    Save a document to MongoDB.
+
+    Args:
+        uri (str): MongoDB URI.
+        db_name (str): Database name.
+        collection_name (str): Collection name.
+        document (dict): Document to save.
+
+    Returns:
+        str: ID of the saved document.
+    """
     try:
         client = MongoClient(uri)
         db = client[db_name]
@@ -626,8 +768,21 @@ def save_to_mongodb(uri, db_name, collection_name, document):
         return str(result.inserted_id)
     except Exception as e:
         return f"Error saving to MongoDB: {str(e)}"
-    
-def get_sections_from_db(file_path_new, file_path_old, db_name="capstone_db", collection_name="sections_data"): 
+
+
+def get_sections_from_db(file_path_new, file_path_old, db_name="capstone_db", collection_name="sections_data"):
+    """
+    Get sections from the database.
+
+    Args:
+        file_path_new (str): Path to the new file.
+        file_path_old (str): Path to the old file.
+        db_name (str): Database name.
+        collection_name (str): Collection name.
+
+    Returns:
+        list: List of section headings.
+    """
     new_file_name = os.path.splitext(os.path.basename(file_path_new))[0]
     old_file_name = os.path.splitext(os.path.basename(file_path_old))[0]
     file_pair = f"{new_file_name}_{old_file_name}"
@@ -652,15 +807,28 @@ def get_sections_from_db(file_path_new, file_path_old, db_name="capstone_db", co
         print(f"An error occurred: {e}")
         return []
 
+
 def fetch_old_and_new_text(file_path_new, file_path_old, db_name="capstone_db", collection_name="sections_data"):
+    """
+    Fetch old and new text from the database.
+
+    Args:
+        file_path_new (str): Path to the new file.
+        file_path_old (str): Path to the old file.
+        db_name (str): Database name.
+        collection_name (str): Collection name.
+
+    Returns:
+        list: List of tuples containing old and new text.
+    """
     file_name_new = os.path.splitext(file_path_new.name)[0]
     print(file_name_new)
     file_name_old = os.path.splitext(file_path_old.name)[0]
-    print(file_name_old) 
+    print(file_name_old)
     file_pair = f"{file_name_new}_{file_name_old}"
     try:
         # Connect to MongoDB
-        client = MongoClient(uri) 
+        client = MongoClient(uri)
         db = client[db_name]
         collection = db[collection_name]
 
@@ -682,67 +850,47 @@ def fetch_old_and_new_text(file_path_new, file_path_old, db_name="capstone_db", 
         print(f"An error occurred while fetching texts: {e}")
         return []
 
-# def find_section_wise_differences_all_pairs(pairs_list, adobe_api_json_outputs_db, documents_data_db, sections_data):
-#     for pair in pairs_list:
-#         new_file_name = os.path.splitext(pair[0])[0]
-#         old_file_name = os.path.splitext(pair[1])[0]
-#         print(pair)
-
-#         new_file_path, old_file_path= get_file_paths_from_pair(pair, root_folder)
-
-#         print(new_file_name)
-#         print(old_file_name)
-
-
-#         new_file_json, old_file_json = get_adobe_api_outputs(new_file_path, old_file_path, adobe_api_json_outputs_db)
-
-#         new_file_section_headings_list, new_file_section_headings_list_with_path, old_file_section_headings_list, old_file_section_headings_list_with_path = get_section_headings_and_processing(new_file_json, old_file_json)
-
-#         new_file_cleaned_text = get_cleaned_text_from_mongodb(new_file_name, documents_data_db)
-#         old_file_cleaned_text = get_cleaned_text_from_mongodb(old_file_name, documents_data_db)
-
-#         list_of_section_texts = get_section_texts(new_file_section_headings_list, new_file_section_headings_list_with_path, old_file_section_headings_list, old_file_section_headings_list_with_path, new_file_cleaned_text, old_file_cleaned_text)
-
-#         print(list_of_section_texts)
-
-#         list_of_section_texts_with_results = get_differences_between_sections(list_of_section_texts)
-
-#         file_pair = (new_file_name, old_file_name)
-
-#         upload_compared_sections_to_mongodb(file_pair, list_of_section_texts_with_results, sections_data)
-
-
-            
 
 def process_and_compare_pdfs(query, file_pair, new_clean_text, old_clean_text, repetitions=3):
-    """Process and compare two PDF documents"""
-    
-    #file_pair = f"{file_name_new}_{file_name_old}"
-    #print(file_pair)
+    """
+    Process and compare two PDF documents.
+
+    Args:
+        query (str): Query to search for.
+        file_pair (str): File pair identifier.
+        new_clean_text (str): Cleaned text of the new file.
+        old_clean_text (str): Cleaned text of the old file.
+        repetitions (int): Number of repetitions.
+
+    Returns:
+        str: Comparison results.
+    """
+    # Check if the query is not empty
     if query != "Select a section":
+        # Fetch comparison results from the database
         result = fetch_comparison_results(file_pair, query, db_name="capstone_db", collection_name="sections_data")
         if result:
             return result
         else:
             err = f"No results found for section '{query}'"
             return err
-    else:    
-
+    else:
+        # Compare the documents using GPT-4o
         print("Comparing documents...")
         comparison_result = compare_documents_with_gpt4o(new_clean_text, old_clean_text)
-            
+
         if comparison_result:
             print("\n--- Initial Comparison Results ---")
             print(comparison_result)
         else:
             print("Failed to retrieve differences.")
 
-        
-        for i in range(repetitions - 1):  
+        # Repeat the comparison for the specified number of repetitions
+        for i in range(repetitions - 1):
             print(f"\n--- Iteration: {i+2} ---")
             print("Making API call to GPT-4o for document comparison...")
             new_result = compare_documents_with_gpt4o_loop(new_clean_text, old_clean_text, comparison_result, i, endpoint, api_key)
-                
+
             if new_result:
                 print("\n--- Additional Differences Found ---")
                 print(new_result)
@@ -750,7 +898,5 @@ def process_and_compare_pdfs(query, file_pair, new_clean_text, old_clean_text, r
             else:
                 print("Failed to retrieve additional differences.")
 
-        
-
+        # Return the comparison results
         return comparison_result
-            

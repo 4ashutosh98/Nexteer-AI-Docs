@@ -1,3 +1,4 @@
+# Import necessary modules and classes
 from adobe_PDF_extract_API import ExtractTextInfoFromPDF
 import os
 import re
@@ -8,6 +9,9 @@ from key_params import uri
 import requests
 from text_comparison_openAI_api import compare_strings
 
+
+# Function to upload a single JSON file to MongoDB
+# Checks for duplicates before uploading
 def upload_json_file_to_mongodb(file_path, db_collection):
     """
     Upload a single JSON file to MongoDB collection with duplicate checking.
@@ -15,6 +19,9 @@ def upload_json_file_to_mongodb(file_path, db_collection):
     Args:
         file_path (str): Absolute path to the JSON file to be uploaded
         db_collection: MongoDB collection object where the file will be stored
+    
+    Returns:
+        None
     
     Behavior:
         1. Extracts filename without extension
@@ -34,6 +41,7 @@ def upload_json_file_to_mongodb(file_path, db_collection):
         - Prevents duplicate uploads
         - Maintains original document structure in database
     """
+    # Extract the filename from the path
     filename = os.path.basename(file_path)
     if filename.lower().endswith('.json'):
         # Check if the file is already in the database
@@ -55,6 +63,8 @@ def upload_json_file_to_mongodb(file_path, db_collection):
         print(f"{filename} is not a JSON file")
 
 
+# Function to recursively upload JSON files from a directory to MongoDB
+# Walks through all subdirectories and uploads JSON files
 def upload_json_files_to_mongodb(folder_path, db_collection):
     """
     Recursively upload all JSON files from a directory to MongoDB collection.
@@ -63,8 +73,11 @@ def upload_json_files_to_mongodb(folder_path, db_collection):
         folder_path (str): Path to directory containing JSON files
         db_collection: MongoDB collection object for storing documents
     
+    Returns:
+        None
+    
     Behavior:
-        1. Walks through all subdirectories recursively
+        1. Walks through directory tree recursively
         2. For each JSON file found:
            - Checks for existing document in database
            - If not exists:
@@ -83,6 +96,7 @@ def upload_json_files_to_mongodb(folder_path, db_collection):
         - Maintains directory structure tracking
         - Provides progress feedback
     """
+    # Traverse the directory and subdirectories
     for foldername, subfolders, filenames in os.walk(folder_path):
         for filename in filenames:
             if filename.lower().endswith('.json'):
@@ -103,12 +117,35 @@ def upload_json_files_to_mongodb(folder_path, db_collection):
                     })
                 print(f"Uploaded {filename} to MongoDB")
 
+
+# Function to generate the path for a JSON file corresponding to a PDF
 def get_json_path(input_pdf):
+    """
+    Generate the path for a JSON file corresponding to a given PDF file.
+    
+    Args:
+        input_pdf (str): The file path of the input PDF.
+    
+    Returns:
+        str: The file path for the corresponding JSON file.
+    """
     base_name = os.path.splitext(os.path.basename(input_pdf))[0]
     return os.path.join("Adobe PDF Extract API outputs", f"{base_name}.json")
 
 
+# Function to print the hierarchical structure of a document
+# Uses recursion to print nested structures
 def print_document_structure(structure, level=0):
+    """
+    Print the hierarchical structure of a document.
+    
+    Args:
+        structure (dict): The document structure to print.
+        level (int, optional): The current level in the hierarchy for indentation. Defaults to 0.
+    
+    Returns:
+        None
+    """
     if structure is None:
         return
     
@@ -118,10 +155,11 @@ def print_document_structure(structure, level=0):
             print_document_structure(value['subsections'], level + 1)
 
 
-# Function to find all PDF files in a directory (including nested directories)
+# Function to find all PDF files in a directory
+# Searches through nested directories
 def find_all_pdfs(root_folder):
     """
-    Recursively search for PDF files in a directory and its subdirectories.
+    Find all PDF files in the given root folder and its subfolders.
     
     Args:
         root_folder (str): Root directory path to start the search
@@ -153,7 +191,24 @@ def find_all_pdfs(root_folder):
     return pdf_files
 
 
+# Function to process a dictionary of PDF files
+# Ensures JSON outputs are generated for each PDF
 def get_json_for_all_pdfs(pdf_files):
+    """
+    Process a dictionary of PDF files to ensure JSON outputs are generated.
+    
+    Args:
+        pdf_files (dict): A dictionary with PDF file names as keys and paths as values.
+    
+    Returns:
+        None
+    
+    Behavior:
+        1. Iterates over each PDF file.
+        2. Checks if a JSON file already exists for the PDF.
+        3. If not, extracts text and generates a JSON file.
+        4. Prints the document structure.
+    """
     for pdf_name, pdf_path in pdf_files.items():
         print(f"Processing PDF: {pdf_name}")
         json_file_path = get_json_path(pdf_path)
@@ -173,6 +228,8 @@ def get_json_for_all_pdfs(pdf_files):
         print("--------------------------------------------\n\n")
 
 
+# Function to retrieve Adobe API outputs for given file paths
+# Extracts and uploads outputs if not found in MongoDB
 def get_adobe_api_outputs(new_file_path, old_file_path, db_collection):
     new_file_name = os.path.basename(new_file_path)
     old_file_name = os.path.basename(old_file_path)
@@ -209,15 +266,16 @@ def get_adobe_api_outputs(new_file_path, old_file_path, db_collection):
 
     return new_file_json, old_file_json
 
-#new_file_json, old_file_json = get_adobe_api_outputs(new_file_path, old_file_path, adobe_api_json_outputs_db)
 
 
 def get_table_of_contents(json_data):
     """
-    Extract table of contents from document JSON data.
+    Extract section headings and process them from JSON data.
     
     Args:
-        json_data (dict): Processed JSON data from PDF extraction
+        new_file_json (dict): JSON data for the new file.
+        old_file_json (dict): JSON data for the old file.
+        regex_pattern (str, optional): Regex pattern for cleaning headings. Defaults to r'^\\d+(\\.\\d+)*\\s+'.
     
     Returns:
         list: Ordered list of table of contents entries
@@ -245,7 +303,7 @@ def get_table_of_contents(json_data):
                 table_of_contents_list.append(element['Text'])
     return table_of_contents_list
 
-#print(get_table_of_contents(new_file_json))
+
 
 def get_section_headings_and_processing(new_file_json,old_file_json, regex_pattern = r'^\d+(\.\d+)*\s+'):
     
@@ -268,10 +326,19 @@ def get_section_headings_and_processing(new_file_json,old_file_json, regex_patte
 
     return new_file_section_headings_list_cleaned, new_file_section_headings_list_with_path, old_file_section_headings_list_cleaned, old_file_section_headings_list_with_path
 
-#new_file_section_headings_list, new_file_section_headings_list_with_path, old_file_section_headings_list, old_file_section_headings_list_with_path = get_section_headings_and_processing(new_file_json, old_file_json)
 
-
+# Function to retrieve cleaned text from MongoDB
 def get_cleaned_text_from_mongodb(file_name, db_collection):
+    """
+    Fetch cleaned text for a document from MongoDB.
+    
+    Args:
+        file_name (str): The name of the file to retrieve cleaned text for.
+        db_collection: The MongoDB collection to query.
+    
+    Returns:
+        str: The cleaned text of the document.
+    """
     data = db_collection.find_one({'file_name': file_name})
     cleaned_text = data.get('cleaned_text')
 
@@ -283,14 +350,26 @@ def get_cleaned_text_from_mongodb(file_name, db_collection):
             #print(f"Table of contents entry not found in clean text: {element}")"""
     return cleaned_text
 
-#new_file_cleaned_text = get_cleaned_text_from_mongodb(os.path.splitext(new_file_name)[0], documents_data_db)
-#old_file_cleaned_text = get_cleaned_text_from_mongodb(os.path.splitext(old_file_name)[0], documents_data_db)
 
-#print(new_file_cleaned_text[:10000])
-#print(old_file_cleaned_text[:10000])
-
-
+# Function to extract section texts from cleaned document text
+# Uses headings to identify sections
 def extract_section_texts(heading_curr_new, heading_next_new, heading_curr_old, heading_next_old, cleaned_text_new, cleaned_text_old, end_index_new, end_index_old):
+    """
+    Extract section texts from cleaned document text using headings.
+    
+    Args:
+        heading_curr_new (str): Current heading in the new file.
+        heading_next_new (str): Next heading in the new file.
+        heading_curr_old (str): Current heading in the old file.
+        heading_next_old (str): Next heading in the old file.
+        cleaned_text_new (str): Cleaned text of the new file.
+        cleaned_text_old (str): Cleaned text of the old file.
+        end_index_new (int): End index of the current heading in the new file.
+        end_index_old (int): End index of the current heading in the old file.
+    
+    Returns:
+        tuple: Section texts for the new and old files, and their end indices.
+    """
     if heading_next_new != None:
         if heading_curr_new == None and heading_curr_old == None:
             heading_curr_index_new = 0
@@ -313,8 +392,22 @@ def extract_section_texts(heading_curr_new, heading_next_new, heading_curr_old, 
         return section_text_new, section_text_old, len(cleaned_text_new), len(cleaned_text_old)
 
 
-
+# Function to extract section texts based on headings
 def get_section_texts(new_file_section_headings_list, new_file_section_headings_list_with_path, old_file_section_headings_list, old_file_section_headings_list_with_path, cleaned_text_new, cleaned_text_old):
+    """
+    Extract section texts from cleaned text based on section headings.
+    
+    Args:
+        new_file_section_headings_list (list): List of section headings for the new file.
+        new_file_section_headings_list_with_path (list): List of section headings with paths for the new file.
+        old_file_section_headings_list (list): List of section headings for the old file.
+        old_file_section_headings_list_with_path (list): List of section headings with paths for the old file.
+        cleaned_text_new (str): Cleaned text of the new file.
+        cleaned_text_old (str): Cleaned text of the old file.
+    
+    Returns:
+        list: List of tuples containing section texts for both files.
+    """
     list_of_section_texts = []
     end_index_new = 0
     end_index_old = 0
@@ -395,11 +488,18 @@ def get_section_texts(new_file_section_headings_list, new_file_section_headings_
 
     return list_of_section_texts
 
-#list_of_section_texts = get_section_texts(new_file_section_headings_list, new_file_section_headings_list_with_path, old_file_section_headings_list, old_file_section_headings_list_with_path, new_file_cleaned_text, old_file_cleaned_text)
 
-
-
+# Function to reconstruct document text excluding the table of contents
 def reconstruct_document_exclude_toc(json_file_path):
+    """
+    Reconstruct document text excluding the table of contents.
+    
+    Args:
+        json_file_path (str): Path to the JSON file containing document data.
+    
+    Returns:
+        str: The reconstructed document text.
+    """
     with open(json_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -418,14 +518,6 @@ def reconstruct_document_exclude_toc(json_file_path):
     combined_text = "\n".join(reconstructed_text)
 
     return combined_text
-
-# Usage
-#json_path = r"D:\Google Drive University\Nexteer AI Docs Capstone Project\Ideas\Adobe PDF Extract API outputs\Ford-IATF-CSR-for-IATF-16949-1May2017.json"
-#document_text = reconstruct_document_exclude_toc(json_path)
-
-# Output the text or use it further
-#print(document_text)  # Print the document text
-
 
 
 sample_response = """
@@ -545,11 +637,23 @@ def compare_documents_with_gpt4o(text_new, text_old, endpoint, api_key):
         print(f"Error: {response.status_code}")
         print(response.text)
         return None
-    
 
 
-# Function to make an API call to GPT-4o for finding differences between two texts
 def compare_documents_with_gpt4o_loop(text_new, text_old, differences, iteration, endpoint, api_key):
+    """
+    Loop to compare document sections using GPT-4o.
+    
+    Args:
+        text_new (str): Text of the new document.
+        text_old (str): Text of the old document.
+        differences (list): List to store differences found.
+        iteration (int): Current iteration number.
+        endpoint (str): API endpoint for GPT-4o.
+        api_key (str): API key for authentication.
+    
+    Returns:
+        None
+    """
     headers = {
         "Content-Type": "application/json",
         "api-key": api_key,
@@ -593,10 +697,18 @@ def compare_documents_with_gpt4o_loop(text_new, text_old, differences, iteration
         print(f"Error: {response.status_code}")
         print(response.text)
         return None
-    
 
 
 def get_differences_between_sections(list_of_section_texts):
+    """
+    Get differences between sections of documents.
+    
+    Args:
+        list_of_section_texts (list): List of section texts to compare.
+    
+    Returns:
+        list: List of differences found between sections.
+    """
     for section_text in list_of_section_texts:
         new_text = section_text[1]
         old_text = section_text[2]
@@ -644,8 +756,8 @@ def get_differences_between_sections(list_of_section_texts):
 
 def upload_compared_sections_to_mongodb(file_pair, list_of_section_texts_with_results, db_collection):
     """
-    Uploads compared sections to a MongoDB collection.
-
+    Upload compared sections to a MongoDB collection.
+    
     Args:
         file_pair (tuple): A tuple containing two strings representing the file pair being compared.
         list_of_section_texts_with_results (list): A list of tuples containing:
@@ -655,7 +767,7 @@ def upload_compared_sections_to_mongodb(file_pair, list_of_section_texts_with_re
             - Next section heading
             - Comparison results
         db_collection: The MongoDB collection where data will be stored.
-
+    
     Returns:
         None
     """
@@ -687,7 +799,20 @@ def upload_compared_sections_to_mongodb(file_pair, list_of_section_texts_with_re
     )
     print(f"Data for file pair {file_pair} successfully uploaded to MongoDB.")
 
+
 def find_section_wise_differences_all_pairs(pairs_list, adobe_api_json_outputs_db, documents_data_db, sections_data):
+    """
+    Find section-wise differences for all pairs in a list.
+    
+    Args:
+        pairs_list (list): List of file pairs to compare.
+        adobe_api_json_outputs_db: MongoDB collection for Adobe API outputs.
+        documents_data_db: MongoDB collection for document data.
+        sections_data: MongoDB collection for section data.
+    
+    Returns:
+        None
+    """
     for pair in pairs_list:
         new_file_name = os.path.splitext(pair[0])[0]
         old_file_name = os.path.splitext(pair[1])[0]
@@ -723,7 +848,21 @@ def find_section_wise_differences_all_pairs(pairs_list, adobe_api_json_outputs_d
 
 def get_mongodb_connection(uri):
     """
-    Establishes a connection to MongoDB and returns the client and database object.
+    Establish a connection to MongoDB and return the client and database object.
+    
+    Args:
+        uri (str): The MongoDB URI for connecting to the database.
+    
+    Returns:
+        tuple: A tuple containing the MongoDB client and database object.
+    
+    Behavior:
+        1. Connects to MongoDB using the provided URI.
+        2. Pings the server to ensure connection is successful.
+        3. Returns the client and the specified database.
+    
+    Note:
+        - Raises a ConnectionError if unable to connect.
     """
     client = MongoClient(uri)
     try:
@@ -736,11 +875,11 @@ def get_mongodb_connection(uri):
 
 def get_file_pairs_from_excel(file_path):
     """
-    Reads an Excel file to extract file pairs for comparison.
-
+    Extract file pairs from an Excel file for comparison.
+    
     Args:
         file_path (str): Path to the Excel file containing document version information.
-
+    
     Returns:
         list: A list of tuples representing file pairs.
     """
@@ -760,11 +899,14 @@ def get_file_pairs_from_excel(file_path):
 
 def check_and_upload_json(file_path, db_collection):
     """
-    Checks if a JSON file is in the MongoDB collection and uploads it if not.
-
+    Check if a JSON file is in the MongoDB collection and upload it if not.
+    
     Args:
         file_path (str): Path to the JSON file.
         db_collection: MongoDB collection to store the data.
+    
+    Returns:
+        None
     """
     filename = os.path.basename(file_path)
     if db_collection.count_documents({'file_name': os.path.splitext(filename)[0]}) > 0:
@@ -784,9 +926,13 @@ def check_and_upload_json(file_path, db_collection):
 
 def get_adobe_api_outputs(new_file_path, old_file_path, db_collection):
     """
-    Retrieves Adobe API outputs for given file paths. If outputs are not found in MongoDB,
-    they are extracted and uploaded.
-
+    Retrieve Adobe API outputs for given file paths. Extract and upload if not found in MongoDB.
+    
+    Args:
+        new_file_path (str): Path to the new file.
+        old_file_path (str): Path to the old file.
+        db_collection: MongoDB collection to store the data.
+    
     Returns:
         tuple: JSON data for new and old files.
     """
@@ -805,7 +951,14 @@ def get_adobe_api_outputs(new_file_path, old_file_path, db_collection):
 
 def get_section_headings(json_data, regex_pattern=r'^\d+(\.\d+)*\s+'):
     """
-    Extracts and cleans section headings from JSON data.
+    Extract and clean section headings from JSON data.
+    
+    Args:
+        json_data (dict): JSON data containing section headings.
+        regex_pattern (str, optional): Regex pattern for cleaning headings. Defaults to r'^\\d+(\\.\\d+)*\\s+'.
+    
+    Returns:
+        list: Cleaned section headings.
     """
     section_headings = ExtractTextInfoFromPDF.get_section_headings(json_data)
     return [re.sub(regex_pattern, '', heading["text"]).strip() for heading in section_headings if heading["text"].strip()]
@@ -813,7 +966,14 @@ def get_section_headings(json_data, regex_pattern=r'^\d+(\.\d+)*\s+'):
 
 def get_cleaned_text(file_name, db_collection):
     """
-    Fetches cleaned text for a document from MongoDB.
+    Fetch cleaned text for a document from MongoDB.
+    
+    Args:
+        file_name (str): The name of the file to retrieve cleaned text for.
+        db_collection: The MongoDB collection to query.
+    
+    Returns:
+        str: The cleaned text of the document.
     """
     data = db_collection.find_one({'file_name': file_name})
     return data.get('cleaned_text') if data else None
@@ -821,7 +981,15 @@ def get_cleaned_text(file_name, db_collection):
 
 def compare_section_texts(list_of_section_texts, endpoint, api_key):
     """
-    Compares texts for each section using GPT-4 and appends results to the section data.
+    Compare texts for each section using GPT-4 and append results to the section data.
+    
+    Args:
+        list_of_section_texts (list): List of section texts to compare.
+        endpoint (str): API endpoint for GPT-4.
+        api_key (str): API key for authentication.
+    
+    Returns:
+        list: List of section texts with comparison results.
     """
     for section_text in list_of_section_texts:
         new_text = section_text[1]
@@ -832,7 +1000,15 @@ def compare_section_texts(list_of_section_texts, endpoint, api_key):
 
 def upload_comparison_results(file_pair, section_texts_with_results, db_collection):
     """
-    Uploads the comparison results to MongoDB.
+    Upload the comparison results to MongoDB.
+    
+    Args:
+        file_pair (tuple): A tuple containing two strings representing the file pair being compared.
+        section_texts_with_results (list): List of section texts with comparison results.
+        db_collection: The MongoDB collection where data will be stored.
+    
+    Returns:
+        None
     """
     file_pair_str = f"{file_pair[0]}__{file_pair[1]}"
     sections = [
@@ -854,7 +1030,13 @@ def upload_comparison_results(file_pair, section_texts_with_results, db_collecti
 
 def find_all_pdfs(root_folder):
     """
-    Finds all PDF files in the given root folder and its subfolders.
+    Find all PDF files in the given root folder and its subfolders.
+    
+    Args:
+        root_folder (str): Root directory path to start the search
+    
+    Returns:
+        list: List of absolute paths to all PDF files found
     """
     pdf_files = []
     for root, dirs, files in os.walk(root_folder):
@@ -863,12 +1045,25 @@ def find_all_pdfs(root_folder):
                 pdf_files.append(os.path.join(root, file))
     return pdf_files
 
+
 def find_section_wise_differences_in_files(new_file_path, old_file_path, adobe_api_json_outputs_db, documents_data_db, sections_data):
+    """
+    Find section-wise differences between two files and upload results to MongoDB.
+    
+    Args:
+        new_file_path (str): Path to the new file.
+        old_file_path (str): Path to the old file.
+        adobe_api_json_outputs_db: MongoDB collection for Adobe API outputs.
+        documents_data_db: MongoDB collection for document data.
+        sections_data: MongoDB collection for section data.
+    
+    Returns:
+        None
+    """
     new_file_name = os.path.splitext(os.path.basename(new_file_path))[0]
     old_file_name = os.path.splitext(os.path.basename(old_file_path))[0]
 
-    #print(new_file_name)
-    #print(old_file_name)
+
     new_file_json, old_file_json = get_adobe_api_outputs(new_file_path, old_file_path, adobe_api_json_outputs_db)
 
     new_file_section_headings_list, new_file_section_headings_list_with_path, old_file_section_headings_list, old_file_section_headings_list_with_path = get_section_headings_and_processing(new_file_json, old_file_json)
@@ -891,7 +1086,16 @@ def find_section_wise_differences_in_files(new_file_path, old_file_path, adobe_a
 
     return sections_data
 
+
 def main():
+    """
+    Main function to execute the application.
+    
+    This function connects to MongoDB, processes PDFs, and compares sections.
+    
+    Returns:
+        None
+    """
     # Establish MongoDB connection
     client, capstone_db = get_mongodb_connection(uri)
     adobe_api_json_outputs_db = capstone_db['adobe_api_json_outputs']

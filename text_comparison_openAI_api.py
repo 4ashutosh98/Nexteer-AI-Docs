@@ -1,3 +1,4 @@
+# Import necessary libraries and modules
 from pydantic import BaseModel, Field, ValidationError
 from openai import AzureOpenAI
 from openai.types.chat import ChatCompletion
@@ -12,6 +13,18 @@ client = AzureOpenAI(
 
 # Define the Pydantic model for structured output
 class Difference(BaseModel):
+    """
+    Represents a difference between two text sections.
+
+    Attributes:
+        type (str): Type of difference ('added', 'removed', or 'modified').
+        description (str | None): Description of the difference.
+        section (str | None): Section of the text where the difference occurs.
+        new_file_text (str | None): Content in the new file text where the difference occurs.
+        old_file_text (str | None): Content in the old file text where the difference occurs.
+        content (str | None): Specific content that differs.
+        position (int | None): Approximate index of the difference in the new file text.
+    """
     type: str = Field(description="Type of difference: 'added', 'removed', or 'modified'")
     description: str | None = Field(description="Description of the difference", default=None)
     section: str | None = Field(description="Section of the text where the difference occurs", default=None)
@@ -21,11 +34,28 @@ class Difference(BaseModel):
     position: int | None = Field(description="The approximate index of the difference in the new file text", default=None)
 
 class ComparisonResult(BaseModel):
+    """
+    Represents the result of comparing two text sections.
+
+    Attributes:
+        differences (list[Difference]): List of differences between the two strings.
+        summary (str): Summary of the main differences.
+    """
     differences: list[Difference] = Field(description="List of differences between the two strings")
     summary: str = Field(description="Summary of the main differences")
 
 # Function to compare strings using Azure OpenAI
 def compare_strings(new_file_text: str, old_file_text: str) -> ComparisonResult | None:
+    """
+    Compares two strings using Azure OpenAI to identify differences.
+
+    Args:
+        new_file_text (str): The text from the new file.
+        old_file_text (str): The text from the old file.
+
+    Returns:
+        ComparisonResult | None: A ComparisonResult object if successful, None otherwise.
+    """
     try:
         # Construct the messages for the prompt
         messages = [
@@ -61,21 +91,26 @@ def compare_strings(new_file_text: str, old_file_text: str) -> ComparisonResult 
         return result
 
     except ValidationError as ve:
+        # Handle validation errors
         print("Validation error:", ve)
         print("Validation errors detail:", ve.errors())
     except Exception as e:
+        # Handle general exceptions
         print(f"Error during API call or processing: {e}")
 
     return None
 
 # Main execution logic for testing
 if __name__ == "__main__":
+    # Define sample texts for comparison
     new_file_text = "The quick brown fox jumps over the lazy dog."
     old_file_text = "The quick brown fox jumps over a very lazy dog."
 
+    # Perform the comparison
     result = compare_strings(new_file_text, old_file_text)
 
     if result:
+        # Output the differences
         print("Differences:")
         for diff in result.differences:
             print(f"Type: {diff.type}, Description: {diff.description}")
@@ -89,7 +124,9 @@ if __name__ == "__main__":
             if diff.position is not None:
                 print(f"Position: {diff.position}")
 
+        # Output the summary
         print("\nSummary:")
         print(result.summary)
     else:
+        # Output an error message if comparison fails
         print("Error in comparing the two texts.")
