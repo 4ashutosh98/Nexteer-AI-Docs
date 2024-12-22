@@ -50,7 +50,7 @@ Follow these instructions to set up the project on your local machine.
 4. **Install the pre-requisites**
 
    ```bash
-   conda install pyyaml == 5.4.1
+   conda install pyyaml==5.4.1
    ```
    OR
 
