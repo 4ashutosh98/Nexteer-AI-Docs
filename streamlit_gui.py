@@ -7,7 +7,13 @@ from app import upload_json_file_to_mongodb, find_section_wise_differences_in_fi
 from section_processing import process_and_upload_pdf
 from document_comparison import get_sections_from_db, fetch_old_and_new_text, process_and_compare_pdfs
 import shutil
-from key_params import uri
+#from key_params import uri
+from dotenv import load_dotenv
+
+
+load_dotenv()
+# Load environment variables from .env file
+uri = os.getenv('uri')
 
 # MongoDB connection setup
 # Connect to the MongoDB client using the provided URI

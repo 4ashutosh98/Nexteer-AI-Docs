@@ -7,7 +7,12 @@ from pymongo.mongo_client import MongoClient
 from reconstruct_text import reconstruct_document_exclude_toc, get_adobe_api_json_outputs_db
 from tqdm import tqdm
 import re
-from key_params import uri
+#from key_params import uri
+from dotenv import load_dotenv
+
+load_dotenv()
+# Load environment variables from .env file
+uri = os.getenv('uri')
 
 # MongoDB connection setup
 # Connect to the MongoDB client using the provided URI

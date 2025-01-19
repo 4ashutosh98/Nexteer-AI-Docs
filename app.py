@@ -5,10 +5,14 @@ import re
 import pandas as pd
 import json
 from pymongo.mongo_client import MongoClient
-from key_params import uri
+#from key_params import uri
 import requests
 from text_comparison_openAI_api import compare_strings
+from dotenv import load_dotenv
 
+load_dotenv()
+# Load environment variables from .env file
+uri = os.getenv('uri')
 
 # Function to upload a single JSON file to MongoDB
 # Checks for duplicates before uploading

@@ -1,8 +1,15 @@
 # Import necessary libraries and modules
+import os
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field, ValidationError
 from openai import AzureOpenAI
 from openai.types.chat import ChatCompletion
-from key_params import endpoint, api_key
+#from key_params import endpoint, api_key
+
+load_dotenv()
+# Load environment variables from .env file
+endpoint = os.getenv('endpoint')
+api_key = os.getenv('api_key')
 
 # Initialize the Azure OpenAI client
 client = AzureOpenAI(

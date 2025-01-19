@@ -2,7 +2,13 @@
 from adobe_PDF_extract_API import ExtractTextInfoFromPDF
 import os
 from pymongo.mongo_client import MongoClient
-from key_params import uri
+#from key_params import uri
+from dotenv import load_dotenv
+
+
+load_dotenv()
+# Load environment variables from .env file
+uri = os.getenv('uri')
 
 # Create a new client and connect to the server
 client = MongoClient(uri)

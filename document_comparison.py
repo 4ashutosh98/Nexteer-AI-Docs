@@ -8,12 +8,18 @@ import requests
 #import streamlit as st
 from pymongo import MongoClient
 #from bson.objectid import ObjectId
-from key_params import endpoint , api_key, uri
+#from key_params import endpoint , api_key, uri
 import json
 from adobe_PDF_extract_API import ExtractTextInfoFromPDF
 import re
 from text_comparison_openAI_api import compare_strings
+from dotenv import load_dotenv
 
+load_dotenv()
+# Load environment variables from .env file
+uri = os.getenv('uri')
+endpoint = os.getenv('endpoint')
+api_key = os.getenv('api_key')
 
 # Function to find all PDF files in a directory (including nested directories)
 
