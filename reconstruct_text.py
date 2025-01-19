@@ -1,8 +1,6 @@
 # Import necessary libraries and modules
-from adobe_PDF_extract_API import ExtractTextInfoFromPDF
 import os
 from pymongo.mongo_client import MongoClient
-#from key_params import uri
 from dotenv import load_dotenv
 
 

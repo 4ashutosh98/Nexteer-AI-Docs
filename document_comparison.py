@@ -1,14 +1,8 @@
 # Import necessary libraries and modules
 import os
-#import fitz  # PyMuPDF for text extraction from PDF
-from collections import defaultdict
-#from tqdm import tqdm
 import re
 import requests
-#import streamlit as st
 from pymongo import MongoClient
-#from bson.objectid import ObjectId
-#from key_params import endpoint , api_key, uri
 import json
 from adobe_PDF_extract_API import ExtractTextInfoFromPDF
 import re

@@ -5,7 +5,6 @@ import re
 import pandas as pd
 import json
 from pymongo.mongo_client import MongoClient
-#from key_params import uri
 import requests
 from text_comparison_openAI_api import compare_strings
 from dotenv import load_dotenv

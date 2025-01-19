@@ -47,18 +47,7 @@ Follow these instructions to set up the project on your local machine.
    pip install --upgrade pip setuptools wheel
    ```
 
-4. **Install the pre-requisites**
-
-   ```bash
-   conda install pyyaml==5.4.1
-   ```
-   OR
-
-   ```bash
-   pip install pyyaml==5.4.1
-   ```
-
-5. **Install the required packages**
+4. **Install the required packages**
 
    ```bash
    pip install -r requirements.txt
@@ -70,19 +59,15 @@ Follow these instructions to set up the project on your local machine.
 - More information on obtaining credentials for the Adobe PDF Services API can be found [here](https://developer.adobe.com/document-services/docs/overview/pdf-extract-api/gettingstarted/).
 - More information on obtaining the OpenAI API endpoint and key can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal#deploy-a-model).
 - During the deployment of OpenAI endpoint, the version of OpenAI API should be `GPT-4o` Version `2024-08-01-preview` or newer.
-- Ensure that the `key_params.py` file is stored as:
-
-  ```python
-  endpoint = "<your endpoint from Azure OpenAI deployment>"
-  api_key = "<your API key from Azure OpenAI deployment>"
-  uri = "<your mongoDB atlas URI>"
-  ```
 
 - Ensure that the `.env` file is stored as:
 
   ```plaintext
   PDF_SERVICES_CLIENT_ID="<your Adobe PDF services client ID>"
   PDF_SERVICES_CLIENT_SECRET="<your Adobe PDF services client secret>"
+  endpoint = "<your endpoint from Azure OpenAI deployment>"
+  api_key = "<your API key from Azure OpenAI deployment>"
+  uri = "<your mongoDB atlas URI>"
   ```
 
 - Create the environment variables from the `.env` file by using a tool like `python-dotenv` or manually setting them in your system's environment. For example, you can use the following Python code snippet to load them:
