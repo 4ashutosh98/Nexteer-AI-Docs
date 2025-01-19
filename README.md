@@ -99,6 +99,8 @@ Follow these instructions to set up the project on your local machine.
 - Upload PDF documents through the Streamlit interface to process and compare them.
 - The application will store extracted data in MongoDB and provide comparison results.
 
+### The deployment of the application is accessible on the following link: [Nexteer Document Comparison Tool](https://nexteer-ai-docs-abumbwfz2xlbmcgvtrfvkr.streamlit.app/)
+
 
 ### Acknowledgments
 
